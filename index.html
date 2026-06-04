@@ -5,24 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VCATCH Helpdesk Portal</title>
 
-<!-- ===== PUSHALERT WEB PUSH ===== -->
-<!-- TODO: Replace YOUR_PUSHALERT_REST_API_KEY with your REST API Key (PushAlert Dashboard → API Keys) -->
-<!-- TODO: Replace YOUR_ADMIN_SEGMENT_ID with your Admin segment ID (optional, remove to notify all subscribers) -->
-<!-- DONE: Upload sw.js to your website ROOT directory -->
-
-<!-- PushAlert Unified Code -->
-<script type="text/javascript">
-    (function(d, t) {
-        var g = d.createElement(t),
-        s = d.getElementsByTagName(t)[0];
-        g.src = "https://cdn.pushalert.co/unified_2aa01c953551e942503d43a0120a8325.js";
-        s.parentNode.insertBefore(g, s);
-    }(document, "script"));
-</script>
-<!-- End PushAlert Unified Code -->
-
-<!-- ===== END PUSHALERT ===== -->
-
 <style>
   :root {
     --gold: #D4A017; --gold-light: #F0C040; --gold-dark: #A07810;
@@ -566,12 +548,16 @@ const ICONS = {
           <select id="admin-filter-priority" onchange="renderAllTickets()">
             <option value="">All Priority</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
           </select>
+          <select id="admin-filter-process" onchange="renderAllTickets()">
+            <option value="">All Process</option>
+          </select>
           <button class="btn btn-outline btn-sm" id="admin-refresh-btn" style="padding:8px 10px;display:inline-flex;align-items:center;gap:4px;cursor:pointer" onclick="renderAllTickets()" title="Refresh tickets"><span id="ico-admin-refresh" style="display:inline-flex"></span></button>
+          <button class="btn btn-danger btn-sm" id="admin-delete-btn" style="display:none;margin-left:auto" onclick="deleteSelectedTickets()">Delete Selected</button>
           <button class="btn btn-gold btn-sm ml-auto" onclick="downloadCSV()"><span id="ico-dl-csv" style="display:inline-flex;margin-right:4px"></span> Download CSV</button>
         </div>
         <div class="card">
           <div class="table-wrap">
-            <table><thead><tr><th>ID</th><th>Subject</th><th>User</th><th>Category</th><th>Priority</th><th>Status</th><th>Assigned</th><th>Date</th><th>Actions</th></tr></thead>
+            <table><thead><tr><th style="width:40px"><input type="checkbox" id="admin-select-all" onchange="toggleSelectAllTickets(this.checked)" style="cursor:pointer"/></th><th>ID</th><th>Subject</th><th>User</th><th>Category</th><th>Priority</th><th>Status</th><th>Assigned</th><th>Date</th><th>Actions</th></tr></thead>
             <tbody id="all-tickets-body"></tbody></table>
           </div>
         </div>
@@ -798,9 +784,10 @@ const ICONS = {
               <option value="role_asc">Sort by Role</option>
               <option value="tickets_desc">Sort by Tickets ↓</option>
             </select>
+            <button class="btn btn-danger btn-sm" id="users-delete-btn" style="display:none;margin-left:auto" onclick="deleteSelectedUsers()">Delete Selected</button>
           </div>
           <div class="table-wrap">
-            <table><thead><tr><th>Name</th><th>EMP ID</th><th>Department</th><th>Process</th><th>Phone</th><th>Role</th><th>Status</th><th>Tickets</th><th>Action</th></tr></thead>
+            <table><thead><tr><th style="width:40px"><input type="checkbox" id="users-select-all" onchange="toggleSelectAllUsers(this.checked)" style="cursor:pointer"/></th><th>Name</th><th>EMP ID</th><th>Department</th><th>Process</th><th>Phone</th><th>Role</th><th>Status</th><th>Tickets</th><th>Action</th></tr></thead>
             <tbody id="users-table-body"></tbody></table>
           </div>
         </div>
@@ -824,16 +811,47 @@ const ICONS = {
           <option value="IT Support">IT Support</option>
           <option value="HR Dept">HR Dept</option>
           <option value="CEO">CEO</option>
+          <option value="Admin">Admin</option>
         </select>
       </div>
       <div class="form-group">
         <label>Sub-Category *</label>
-        <select id="t-category" disabled>
+        <select id="t-category" disabled onchange="updateCategoryFields()">
           <option value="">— Select Department first —</option>
         </select>
       </div>
     </div>
     <div class="form-row">
+      <div class="form-group">
+        <label>Employee Name *</label>
+        <input type="text" id="t-emp-name" placeholder="Enter full name">
+      </div>
+      <div class="form-group">
+        <label>Emp ID *</label>
+        <input type="text" id="t-emp-id" placeholder="Enter employee ID (e.g., VC0646)">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" id="cubical-id-group" style="display:none">
+        <label>Cubical ID</label>
+        <input type="text" id="t-cubical-id" placeholder="Enter cubical ID">
+      </div>
+      <div class="form-group" id="asset-sub-category-group" style="display:none">
+        <label>Asset Type *</label>
+        <select id="t-asset-type">
+          <option value="">— Select Asset —</option>
+          <option value="Laptop">Laptop</option>
+          <option value="Keyboard">Keyboard</option>
+          <option value="Mouse">Mouse</option>
+          <option value="Headphone">Headphone</option>
+          <option value="Single system internet issue/drop">Single system internet issue/drop</option>
+          <option value="Monitor">Monitor</option>
+          <option value="CPU">CPU</option>
+          <option value="Charger">Charger</option>
+          <option value="Additional Desktop Required">Additional Desktop Required</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
       <div class="form-group">
         <label>Priority *</label>
         <select id="t-priority">
@@ -842,6 +860,18 @@ const ICONS = {
           <option value="High">High</option>
         </select>
       </div>
+    </div>
+    <div class="form-row" id="recharge-fields-group" style="display:none">
+      <div class="form-group">
+        <label>Name *</label>
+        <input type="text" id="t-recharge-name" placeholder="Enter name for recharge">
+      </div>
+      <div class="form-group">
+        <label>Mobile Number *</label>
+        <input type="tel" id="t-recharge-mobile" placeholder="Enter mobile number">
+      </div>
+    </div>
+    <div class="form-row">
       <div class="form-group">
         <label>Phone Number *</label>
         <input type="tel" id="t-phone" placeholder="Enter your phone number (e.g. 9876543210)">
@@ -983,7 +1013,7 @@ function renderUsers() {
   });
   
   if (!users.length) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:32px">No users found.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:32px">No users found.</td></tr>`;
     return;
   }
   
@@ -1002,7 +1032,9 @@ function renderUsers() {
       ? `<button class="btn btn-sm" style="background:${isActive?'rgba(239,68,68,0.15)':'rgba(34,197,94,0.15)'};color:${isActive?'#F87171':'#4ADE80'};border:1px solid ${isActive?'rgba(239,68,68,0.3)':'rgba(34,197,94,0.3)'}" onclick="toggleUserStatus('${u.email}',${isActive})">${isActive?'Deactivate':'Activate'}</button>` : '';
     const removeBtn = u.email!=="VC0646"
       ? `<button class="btn btn-danger btn-sm" onclick="removeUser('${u.email}')">Remove</button>` : '<span style="color:var(--text-muted);font-size:12px">Protected</span>';
+    const checkbox = u.email!=="VC0646" ? `<input type="checkbox" class="user-checkbox" value="${u.email}" onchange="updateUserDeleteButton()" style="cursor:pointer"/>` : '';
     return `<tr>
+      <td style="width:40px">${checkbox}</td>
       <td>${u.name}</td>
       <td style="color:var(--text-muted)">${u.email||"—"}</td>
       <td style="color:var(--text-muted)">${u.department||"—"}</td>
@@ -1019,7 +1051,7 @@ function renderUsers() {
   }).join("");
   
   if (hasMore) {
-    tbody.innerHTML += `<tr style="background:var(--dark3);"><td colspan="9" style="text-align:center;padding:16px;">
+    tbody.innerHTML += `<tr style="background:var(--dark3);"><td colspan="10" style="text-align:center;padding:16px;">
       <button class="btn btn-outline btn-sm" onclick="showAllUsers()">Load More (${displayUsers.length} of ${users.length})</button>
     </td></tr>`;
   }
@@ -1076,6 +1108,20 @@ function hashPass(p) { return btoa(p + "vcatch_salt_2024"); }
 
 async function init() {
   try {
+    // Check if user session exists in localStorage
+    const savedSession = localStorage.getItem('vcatch_user_session');
+    if (savedSession) {
+      try {
+        currentUser = JSON.parse(savedSession);
+        hideLoading();
+        loadApp();
+        return;
+      } catch(e) {
+        console.warn("Failed to restore session:", e);
+        localStorage.removeItem('vcatch_user_session');
+      }
+    }
+    
     const adminRef = doc(db, USERS_COL, "VC0646");
     if (!(await getDoc(adminRef)).exists()) {
       await setDoc(adminRef, { uid:"VC0646", name:"IT Admin", email:"VC0646", password:hashPass("Admin@2026"), role:"admin", department:"IT", createdAt:serverTimestamp() });
@@ -1122,6 +1168,8 @@ window.doLogin = async function() {
     const u = snap.data();
     if (u.password !== hashPass(pass)) throw new Error("Wrong password");
     currentUser = u;
+    // Save session to localStorage
+    localStorage.setItem('vcatch_user_session', JSON.stringify(currentUser));
     document.getElementById("login-view").classList.remove("active");
     loadApp();
   } catch(e) {
@@ -1134,6 +1182,8 @@ document.getElementById("login-pass").addEventListener("keydown", e => { if(e.ke
 
 window.doLogout = function() {
   stopAutoRefresh();
+  // Clear session from localStorage
+  localStorage.removeItem('vcatch_user_session');
   currentUser = null; allTickets = []; allUsers = [];
   document.getElementById("app-view").classList.remove("active");
   document.getElementById("login-view").classList.add("active");
@@ -1291,6 +1341,9 @@ async function loadApp() {
   // Show correct nav section
   if (isSuperAdmin(currentUser.role)) {
     document.getElementById("superadmin-nav").style.display = "block";
+    // Hide WA Notifications for admin role (only CEO and it_support can access)
+    const waButton = document.getElementById("nav-wasettings");
+    if (waButton) waButton.style.display = (currentUser.role === "ceo" || currentUser.role === "it_support") ? "block" : "none";
   }
   if (isDeptRole(currentUser.role)) {
     const deptNav = document.getElementById("dept-nav");
@@ -1348,6 +1401,7 @@ window.showSection = async function(name) {
   const fullAccessOnly = ["all-tickets"];
   const deptOnly       = ["dept-tickets"];
   const teamOnly       = ["team-tickets"];
+  const ceoAdminOnly   = ["wa-settings"];
   if (fullAccessOnly.includes(name) && !isSuperAdmin(currentUser.role)) {
     toast("Access denied.", "error"); return;
   }
@@ -1358,6 +1412,9 @@ window.showSection = async function(name) {
     toast("Access denied.", "error"); return;
   }
   if (teamOnly.includes(name) && currentUser.role !== "team_leader") {
+    toast("Access denied.", "error"); return;
+  }
+  if (ceoAdminOnly.includes(name) && !(currentUser.role === "ceo" || currentUser.role === "it_support")) {
     toast("Access denied.", "error"); return;
   }
   document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
@@ -1473,14 +1530,42 @@ window.renderAllTickets = function() {
   const q  = document.getElementById("admin-search").value.toLowerCase();
   const st = document.getElementById("admin-filter-status").value;
   const pr = document.getElementById("admin-filter-priority").value;
+  const proc = document.getElementById("admin-filter-process").value;
+  
+  // Populate process filter options
+  const processFilter = document.getElementById("admin-filter-process");
+  const currentProcessValue = processFilter.value;
+  const allProcesses = [...new Set(allTickets.map(t => {
+    const user = allUsers.find(u => u.email === t.userEmail);
+    return user?.process || "";
+  }).filter(p => p))];
+  
+  const existingOptions = [...processFilter.querySelectorAll("option")].map(o => o.value);
+  allProcesses.forEach(p => {
+    if (!existingOptions.includes(p)) {
+      const opt = document.createElement("option");
+      opt.value = p;
+      opt.textContent = p;
+      processFilter.appendChild(opt);
+    }
+  });
+  processFilter.value = currentProcessValue;
+  
   if (q)  tickets = tickets.filter(t=>t.subject.toLowerCase().includes(q)||t.ticketId.toLowerCase().includes(q)||(t.userName||"").toLowerCase().includes(q));
   if (st) tickets = tickets.filter(t=>t.status===st);
   if (pr) tickets = tickets.filter(t=>t.priority===pr);
+  if (proc) {
+    tickets = tickets.filter(t=>{
+      const user = allUsers.find(u => u.email === t.userEmail);
+      return user?.process === proc;
+    });
+  }
   tickets.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
   const tbody = document.getElementById("all-tickets-body");
-  if (!tickets.length) { tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:32px">No tickets found</td></tr>`; return; }
+  if (!tickets.length) { tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:32px">No tickets found</td></tr>`; return; }
   tbody.innerHTML = tickets.map(t=>`
     <tr>
+      <td style="width:40px"><input type="checkbox" class="ticket-checkbox" value="${t.id}" onchange="updateDeleteButton()" style="cursor:pointer"/></td>
       <td style="color:var(--gold);font-size:13px;font-weight:700">${t.ticketId}</td>
       <td>${t.subject}</td><td style="color:var(--text-muted)">${t.userName||t.userEmail}</td>
       <td style="color:var(--text-muted)">${t.category}</td>
@@ -1489,6 +1574,36 @@ window.renderAllTickets = function() {
       <td style="color:var(--text-muted)">${fmtDate(t.createdAt)}</td>
       <td><button class="btn btn-gold btn-sm" onclick="openAdminModal('${t.id}')">Manage</button></td>
     </tr>`).join("");
+};
+
+window.updateDeleteButton = function() {
+  const selectedCount = document.querySelectorAll(".ticket-checkbox:checked").length;
+  const deleteBtn = document.getElementById("admin-delete-btn");
+  deleteBtn.style.display = selectedCount > 0 ? "inline-flex" : "none";
+  deleteBtn.textContent = selectedCount > 0 ? `Delete Selected (${selectedCount})` : "Delete Selected";
+};
+
+window.toggleSelectAllTickets = function(checked) {
+  document.querySelectorAll(".ticket-checkbox").forEach(cb => cb.checked = checked);
+  updateDeleteButton();
+};
+
+window.deleteSelectedTickets = async function() {
+  const selectedIds = [...document.querySelectorAll(".ticket-checkbox:checked")].map(cb => cb.value);
+  if (selectedIds.length === 0) { toast("No tickets selected.", "error"); return; }
+  if (!confirm(`Delete ${selectedIds.length} ticket(s)? This cannot be undone.`)) return;
+  
+  try {
+    for (const id of selectedIds) {
+      await deleteDoc(doc(db, TICKETS_COL, id));
+    }
+    toast(`Deleted ${selectedIds.length} ticket(s)`, "success");
+    document.getElementById("admin-select-all").checked = false;
+    await refreshData();
+    renderAllTickets();
+  } catch(e) {
+    toast("Delete failed: " + e.message, "error");
+  }
 };
 
 window.openAdminModal = function(id) {
@@ -1553,46 +1668,133 @@ window.openRaiseModal = function() {
 window.updateSubMenu = function() {
   const dept = document.getElementById("t-department").value;
   const cat  = document.getElementById("t-category");
+  const cubicalIdGroup = document.getElementById("cubical-id-group");
+  const assetSubCategoryGroup = document.getElementById("asset-sub-category-group");
+  const rechargeFieldsGroup = document.getElementById("recharge-fields-group");
   const subMenus = {
     "Accounts":   ["Salary","PF & ESI","Advance","Claim"],
     "Management": ["Infrastructure","POSH","Training and Quality","Request Leave","Assets (Laptop, Mobile & Recharge)"],
     "IT Support": ["Hardware","Software","Network","Email","Printer","Access/Password","Phone/Intercom","Other"],
     "HR Dept":    ["ID Card - New Apply","ID Card - Lost Reapply","Offer Letter","Salary Issue","Others"],
-    "CEO":        ["Payroll Issues","Ignored Harassment","Complaint About Management","Direct Talk (Personal)"]
+    "CEO":        ["Payroll Issues","Ignored Harassment","Complaint About Management","Direct Talk (Personal)"],
+    "Admin":      ["Request Assets","Recharge","Request for Add New Fingerprint Access"]
   };
   if (!dept) {
     cat.innerHTML = '<option value="">— Select Department first —</option>';
     cat.disabled = true;
+    cubicalIdGroup.style.display = "none";
+    assetSubCategoryGroup.style.display = "none";
+    rechargeFieldsGroup.style.display = "none";
     return;
   }
   const options = subMenus[dept] || [];
   cat.innerHTML = '<option value="">— Select Sub-Category —</option>' +
     options.map(o => `<option value="${o}">${o}</option>`).join('');
   cat.disabled = false;
+  // Show Cubical ID only for IT Support
+  cubicalIdGroup.style.display = dept === "IT Support" ? "block" : "none";
+  // Hide conditional fields initially
+  assetSubCategoryGroup.style.display = "none";
+  rechargeFieldsGroup.style.display = "none";
+};
+
+window.updateCategoryFields = function() {
+  const dept = document.getElementById("t-department").value;
+  const category = document.getElementById("t-category").value;
+  const assetSubCategoryGroup = document.getElementById("asset-sub-category-group");
+  const rechargeFieldsGroup = document.getElementById("recharge-fields-group");
+  
+  // Hide all conditional fields first
+  assetSubCategoryGroup.style.display = "none";
+  rechargeFieldsGroup.style.display = "none";
+  
+  // Show fields based on selected category
+  if (dept === "Admin") {
+    if (category === "Request Assets") {
+      assetSubCategoryGroup.style.display = "block";
+    } else if (category === "Recharge") {
+      rechargeFieldsGroup.style.display = "block";
+    }
+  }
 };
 
 window.submitTicket = async function() {
   const dept    = document.getElementById("t-department").value;
   const cat     = document.getElementById("t-category").value;
+  const empName = document.getElementById("t-emp-name").value.trim();
+  const empId   = document.getElementById("t-emp-id").value.trim();
+  const cubicalId = document.getElementById("t-cubical-id").value.trim();
+  const assetType = document.getElementById("t-asset-type").value.trim();
+  const rechargeName = document.getElementById("t-recharge-name").value.trim();
+  const rechargeMobile = document.getElementById("t-recharge-mobile").value.trim();
   const desc    = document.getElementById("t-desc").value.trim();
   const phone   = document.getElementById("t-phone").value.trim();
   if (!dept || !cat) { toast("Please select a Department and Sub-Category.","error"); return; }
+  if (!empName)      { toast("Employee Name is required.","error"); return; }
+  if (!empId)        { toast("Employee ID is required.","error"); return; }
+  if (dept === "Admin" && cat === "Request Assets" && !assetType) { toast("Please select an Asset Type.","error"); return; }
+  if (dept === "Admin" && cat === "Recharge" && !rechargeName) { toast("Name is required for Recharge.","error"); return; }
+  if (dept === "Admin" && cat === "Recharge" && !rechargeMobile) { toast("Mobile Number is required for Recharge.","error"); return; }
   if (!desc)         { toast("Description is required.","error"); return; }
   if (!phone)        { toast("Phone number is required.","error"); return; }
   try {
-    const ticketId = await genTicketId();
+    let ticketId = await genTicketId();
     const subject  = dept + " — " + cat;
-    await addDoc(collection(db, TICKETS_COL), {
+    const docRef = await addDoc(collection(db, TICKETS_COL), {
       ticketId, subject, description:desc,
       category: cat,
       department: dept,
       priority: document.getElementById("t-priority").value,
       phone: phone,
+      employeeName: empName,
+      employeeId: empId,
+      cubicalId: dept === "IT Support" ? cubicalId : "",
+      assetType: dept === "Admin" && cat === "Request Assets" ? assetType : "",
+      rechargeName: dept === "Admin" && cat === "Recharge" ? rechargeName : "",
+      rechargeMobile: dept === "Admin" && cat === "Recharge" ? rechargeMobile : "",
       asset: "", location: "",
       userEmail: currentUser.email, userName: currentUser.name, userDept: currentUser.department||"",
       status:"Open", assignedTo:"", adminNotes:"",
       createdAt:serverTimestamp(), updatedAt:serverTimestamp()
     });
+    ticketId = docRef.id;
+    
+    // Auto-assign ticket to an available manager from the selected department
+    const deptToRoleMap = {
+      "Accounts": "accounts",
+      "Management": "management",
+      "IT Support": "it_support",
+      "HR Dept": "hr",
+      "CEO": "ceo",
+      "Admin": "admin"
+    };
+    const managerRole = deptToRoleMap[dept];
+    let assignedTo = "";
+    if (managerRole) {
+      // Find all users with the matching role
+      const managers = allUsers.filter(u => u.role === managerRole && u.active !== false);
+      if (managers.length > 0) {
+        // Find managers who DON'T have "In Progress" tickets or assign to one with least load
+        const inProgressTicketsByManager = {};
+        allTickets.forEach(t => {
+          if (t.status === "In Progress" && t.assignedTo) {
+            inProgressTicketsByManager[t.assignedTo] = (inProgressTicketsByManager[t.assignedTo] || 0) + 1;
+          }
+        });
+        
+        // Sort managers by number of in-progress tickets (ascending)
+        const sortedManagers = managers.sort((a, b) => {
+          const aCount = inProgressTicketsByManager[a.name] || 0;
+          const bCount = inProgressTicketsByManager[b.name] || 0;
+          return aCount - bCount;
+        });
+        
+        // Assign to the manager with the least in-progress tickets
+        assignedTo = sortedManagers[0].name;
+        await updateDoc(doc(db, TICKETS_COL, docRef.id), { assignedTo });
+      }
+    }
+    
     toast(`Ticket ${ticketId} submitted!`, "success");
     closeModal("raise-modal");
 
@@ -1792,6 +1994,37 @@ window.removeUser = async function(email) {
   if (!confirm(`Remove ${email}?`)) return;
   try { await deleteDoc(doc(db,USERS_COL,email)); toast("User removed.","success"); await refreshData(); renderUsers(); }
   catch(e) { toast("Failed.","error"); }
+};
+
+window.updateUserDeleteButton = function() {
+  const selectedCount = document.querySelectorAll(".user-checkbox:checked").length;
+  const deleteBtn = document.getElementById("users-delete-btn");
+  deleteBtn.style.display = selectedCount > 0 ? "inline-flex" : "none";
+  deleteBtn.textContent = selectedCount > 0 ? `Delete Selected (${selectedCount})` : "Delete Selected";
+};
+
+window.toggleSelectAllUsers = function(checked) {
+  document.querySelectorAll(".user-checkbox").forEach(cb => cb.checked = checked);
+  updateUserDeleteButton();
+};
+
+window.deleteSelectedUsers = async function() {
+  if (!isSuperAdmin(currentUser.role)) { toast("Access denied.", "error"); return; }
+  const selectedEmails = [...document.querySelectorAll(".user-checkbox:checked")].map(cb => cb.value);
+  if (selectedEmails.length === 0) { toast("No users selected.", "error"); return; }
+  if (!confirm(`Delete ${selectedEmails.length} user(s)? This cannot be undone.`)) return;
+  
+  try {
+    for (const email of selectedEmails) {
+      await deleteDoc(doc(db, USERS_COL, email));
+    }
+    toast(`Deleted ${selectedEmails.length} user(s)`, "success");
+    document.getElementById("users-select-all").checked = false;
+    await refreshData();
+    renderUsers();
+  } catch(e) {
+    toast("Delete failed: " + e.message, "error");
+  }
 };
 
 window.downloadCSV = function() {
