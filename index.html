@@ -199,6 +199,20 @@
   .nav-item:hover { background:var(--dark3); color:var(--text); }
   .nav-item.active { background:rgba(212,160,23,0.15); color:var(--gold); }
   .nav-item .icon { font-size:16px; width:20px; text-align:center; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+  /* Colorful sidebar icons */
+  #ico-dashboard { color:#3B82F6; }
+  #ico-tickets { color:var(--gold); }
+  #ico-raise { color:#22C55E; }
+  #ico-alltickets { color:#F59E0B; }
+  #ico-users, #ico-all-users { color:#A855F7; }
+  #ico-teamtickets { color:#06B6D4; }
+  #ico-team { color:#EC4899; }
+  /* Colorful action icons */
+  #ico-my-refresh, #ico-admin-refresh { color:#3B82F6; }
+  #ico-add-user, #ico-btn-raise { color:#22C55E; }
+  #ico-bulk-upload, #ico-folder-drop { color:#F59E0B; }
+  #ico-dl-csv, #ico-dl-users, #ico-dl-team, #ico-dl-dept, #ico-dl-tpl { color:#06B6D4; }
+  #ico-crown, #ico-crown2, #ico-recent-tickets { color:var(--gold); }
   .sidebar-footer { padding:16px 12px; border-top:1px solid var(--dark3); }
   .user-badge {
     display:flex; align-items:center; gap:10px; padding:10px 12px;
@@ -226,6 +240,10 @@
   .stat-card .stat-label { font-size:11px; color:var(--text-muted); letter-spacing:1.5px; text-transform:uppercase; }
   .stat-card .stat-value { font-size:40px; color:var(--text); margin-top:4px; line-height:1; font-weight:700; }
   .stat-card .stat-icon { position:absolute; right:16px; top:16px; opacity:0.25; display:flex; align-items:center; justify-content:center; }
+  .stat-card.gold .stat-icon { color:var(--gold); opacity:0.85; }
+  .stat-card.blue .stat-icon { color:var(--info); opacity:0.85; }
+  .stat-card.warn .stat-icon { color:var(--warning); opacity:0.85; }
+  .stat-card.green .stat-icon { color:var(--success); opacity:0.85; }
 
   .card { background:var(--dark2); border:1px solid var(--dark3); border-radius:12px; padding:24px; margin-bottom:20px; }
   .card-title { font-weight:700; font-size:16px; margin-bottom:20px; display:flex; align-items:center; gap:8px; }
